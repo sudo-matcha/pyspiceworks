@@ -2,12 +2,14 @@ import requests
 import json
 import os
 import re
-from selenium import webdriver
+from seleniumwire import webdriver
+from selenium.webdriver import FirefoxOptions, FirefoxService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 from relative_datetime import DateTimeUtils
+from pybetterloader.Loader import Loader
 
 class Spiceworks:
     '''
@@ -37,8 +39,8 @@ class Spiceworks:
         '''
         Initializes the webdriver (used for getting access tokens and whatnot) (this is necessary !!)
         '''
-        driver_service = webdriver.FirefoxService(executable_path=self.geckodriver_path)
-        ff_options = webdriver.FirefoxOptions()
+        driver_service = FirefoxService(executable_path=self.geckodriver_path)
+        ff_options = FirefoxOptions()
         if kwargs.get("headless", True):
             ff_options.add_argument("--headless")
         self.driver = webdriver.Firefox(service=driver_service, options=ff_options)
@@ -75,6 +77,18 @@ class Spiceworks:
         relstring = DateTimeUtils.relative_datetime(tron_expire_dt)[0]
         print(f"\x1b[2m[INFO] \x1b[0;1;35mGot _tron_session id!\x1b[0;1m This expires in \x1b[34m{relstring}.\x1b[0;1m Renew it before then!\x1b[0m")
         return self.tron_session
+    
+    def get_ticket_CSRF_token(self) -> str | None:
+        wait = WebDriverWait(self.driver, 10)
+
+        wait.until(
+            EC.url_matches(r"https\:\/\/on\.spiceworks\.com\/tickets\/.+")
+        )
+        self.driver.refresh()
+        print(self.driver.current_url)
+        request = self.driver.wait_for_request("/api/main/tickets")
+        self.CSRF_token = request.headers.get("X-CSRF-TOKEN")
+        return request.headers.get("X-CSRF-TOKEN")
 
     def kill_driver(self):
         '''
@@ -91,14 +105,28 @@ class Spiceworks:
         '''
 
         url = f"https://on.spiceworks.com/api/main/tickets?page[number]={page}&page[size]={limit}"
-        cookies = {
-            "_tron_session": self.tron_session
-        }
+        try:
+            if self.tron_session:
+                cookies = {
+                    "_tron_session": self.tron_session
+                }
+            else:
+                cookies = {}
+        except AttributeError:
+            cookies = {}
+            
         headers = {
             "Host": "on.spiceworks.com",
             "Referer": f"https://on.spiceworks.com/tickets/open/{page}",
-            "Uesr-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0"
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "DNT": "1"
         }
+        if self.CSRF_token:
+            headers.update({"X-CSRF-TOKEN": self.CSRF_token})
+
         try:
             resp = requests.get(url=url, cookies=cookies, headers=headers)
         except Exception as e:
@@ -107,6 +135,6 @@ class Spiceworks:
         
         print(resp.text)
         print(resp.headers)
-        # tickets = resp.json()
-        tickets = {}
+        tickets = resp.json()
+        # tickets = {}
         return tickets
