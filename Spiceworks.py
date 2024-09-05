@@ -13,7 +13,7 @@ from pybetterloader.Loader import Loader
 
 class Spiceworks:
     '''
-    **A minimal wrapper for the internal Spiceworks Cloud IT Help Desk**
+    **A minimal python wrapper for the internal Spiceworks Cloud IT Help Desk API**
 
     Default geckodriver path is `/snap/bin/geckodriver/`. If yours is different, pass it as a `kwarg`.
     Pass `manual=True` to initialize and login and everythnig yourself.
