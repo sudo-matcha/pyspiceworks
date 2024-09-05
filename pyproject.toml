@@ -1,0 +1,17 @@
+[project]
+name = "pyspiceworks"
+version = "0.0.1"
+authors = [
+  { name="Milo Pitsch", email="jskresl@gmail.com" },
+]
+description = "A minimal python wrapper for the internal Spiceworks Cloud IT Help Desk API"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: Linux",
+]
+
+[project.urls]
+Homepage = "https://github.com/sudo-matcha/pyspiceworks"
+Issues = "https://github.com/sudo-matcha/pyspiceworks/issues"
