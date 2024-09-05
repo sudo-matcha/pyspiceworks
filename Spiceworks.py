@@ -16,6 +16,7 @@ class Spiceworks:
     **A minimal wrapper for the internal Spiceworks Cloud IT Help Desk**
 
     Default geckodriver path is `/snap/bin/geckodriver/`. If yours is different, pass it as a `kwarg`.
+    Pass `manual=True` to initialize and login and everythnig yourself.
     '''
     def __init__(self, **kwargs):
         self.driver = None
@@ -34,11 +35,16 @@ class Spiceworks:
             self.SPICEWORKS_PASSWORD = kwargs.get("spiceworks_password")
         else:
             self.SPICEWORKS_PASSWORD = os.getenv("SPICEWORKS_PASSWORD")
+        
+        if not kwargs.get("maunal", False):
+            self.init_driver(geckodriver=self.geckodriver_path, spiceworks_email=self.SPICEWORKS_EMAIL, spiceworks_password=self.SPICEWORKS_PASSWORD)
+            self.login()
 
     def init_driver(self, **kwargs) -> None:
         '''
         Initializes the webdriver (used for getting access tokens and whatnot) (this is necessary !!)
         '''
+        print("\x1b[2m[INFO] \x1b[0;1;35mInitializing Webdriver...\x1b[0m")
         driver_service = FirefoxService(executable_path=self.geckodriver_path)
         ff_options = FirefoxOptions()
         if kwargs.get("headless", True):
@@ -46,6 +52,7 @@ class Spiceworks:
         self.driver = webdriver.Firefox(service=driver_service, options=ff_options)
 
     def login(self) -> bool:
+        print("\x1b[2m[INFO] \x1b[0;1;34mLogging In...\x1b[0m")
         if not (bool(self.SPICEWORKS_EMAIL) & bool(self.SPICEWORKS_PASSWORD)):
             raise ValueError("\x1b[1;31mMissing SPICEWORKS_EMAIL and/or SPICEWORKS_PASSWORD.\nYou can pass them as arguments or set them as environment variables.\x1b[0m")
             return False
@@ -78,17 +85,18 @@ class Spiceworks:
         print(f"\x1b[2m[INFO] \x1b[0;1;35mGot _tron_session id!\x1b[0;1m This expires in \x1b[34m{relstring}.\x1b[0;1m Renew it before then!\x1b[0m")
         return self.tron_session
     
-    def get_ticket_CSRF_token(self) -> str | None:
+    def get_ticket_req_headers(self) -> str | None:
         wait = WebDriverWait(self.driver, 10)
 
+        print("\x1b[2m[INFO] \x1b[0;1;34mGetting headers...\x1b[0m")
         wait.until(
             EC.url_matches(r"https\:\/\/on\.spiceworks\.com\/tickets\/.+")
         )
         self.driver.refresh()
-        print(self.driver.current_url)
         request = self.driver.wait_for_request("/api/main/tickets")
         self.CSRF_token = request.headers.get("X-CSRF-TOKEN")
-        return request.headers.get("X-CSRF-TOKEN")
+        self.tickets_headers = request.headers
+        return request.headers
 
     def kill_driver(self):
         '''
@@ -114,27 +122,12 @@ class Spiceworks:
                 cookies = {}
         except AttributeError:
             cookies = {}
-            
-        headers = {
-            "Host": "on.spiceworks.com",
-            "Referer": f"https://on.spiceworks.com/tickets/open/{page}",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "DNT": "1"
-        }
-        if self.CSRF_token:
-            headers.update({"X-CSRF-TOKEN": self.CSRF_token})
-
+        self.get_ticket_req_headers()
         try:
-            resp = requests.get(url=url, cookies=cookies, headers=headers)
+            resp = requests.get(url=url, cookies=cookies, headers=self.tickets_headers)
         except Exception as e:
             print(e)
             return False
         
-        print(resp.text)
-        print(resp.headers)
         tickets = resp.json()
-        # tickets = {}
         return tickets
