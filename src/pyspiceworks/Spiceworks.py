@@ -1,7 +1,7 @@
 import requests
-import json
+# import json
 import os
-import re
+# import re
 from seleniumwire import webdriver
 from selenium.webdriver import FirefoxOptions, FirefoxService
 from selenium.webdriver.common.by import By
@@ -9,7 +9,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 from relative_datetime import DateTimeUtils
-from pybetterloader.Loader import Loader
+# from pybetterloader.Loader import Loader
 
 class Spiceworks:
     '''
@@ -20,6 +20,10 @@ class Spiceworks:
     '''
     def __init__(self, **kwargs):
         self.driver = None
+        self.tickets_headers = None
+        self.CSRF_token = None
+        self.tron_session = None
+        self.tron_session_cookie = None
 
         if kwargs.get("geckodriver", False):
             self.geckodriver_path = kwargs.get("geckodriver")
@@ -66,13 +70,13 @@ class Spiceworks:
             return False
         return True
 
-    def get_cookies(self):
+    def _get_cookies(self):
         wait = WebDriverWait(self.driver, 10)
         wait.until(EC.url_matches(r"^https\:\/\/on\.spiceworks\.com\/tickets\/.+?$"))
         return self.driver.get_cookies()
     
-    def get_tron_session(self) -> dict:
-        cookies = self.get_cookies()
+    def _get_tron_session(self) -> dict:
+        cookies = self._get_cookies()
         for cookie in cookies:
             if cookie["name"] == "_tron_session":
                 self.tron_session_cookie = cookie
@@ -85,15 +89,19 @@ class Spiceworks:
         print(f"\x1b[2m[INFO] \x1b[0;1;35mGot _tron_session id!\x1b[0;1m This expires in \x1b[34m{relstring}.\x1b[0;1m Renew it before then!\x1b[0m")
         return self.tron_session
     
-    def get_ticket_req_headers(self) -> str | None:
+    def _get_ticket_req_headers(self) -> str | None:
         wait = WebDriverWait(self.driver, 10)
 
         print("\x1b[2m[INFO] \x1b[0;1;34mGetting headers...\x1b[0m")
+        print("\x1b[2m[INFO] \x1b[0;1;34mWaiting on the page to load...\x1b[0m")
         wait.until(
             EC.url_matches(r"https\:\/\/on\.spiceworks\.com\/tickets\/.+")
         )
+        print("\x1b[2m[INFO] \x1b[0;1;34mRefreshing...\x1b[0m")
         self.driver.refresh()
+        print("\x1b[2m[INFO] \x1b[0;1;34mWaiting on ticket request...\x1b[0m")
         request = self.driver.wait_for_request("/api/main/tickets")
+        print("\x1b[2m[INFO] \x1b[0;1;32mCaught ticket request!\x1b[0m")
         self.CSRF_token = request.headers.get("X-CSRF-TOKEN")
         self.tickets_headers = request.headers
         return request.headers
@@ -103,9 +111,11 @@ class Spiceworks:
         Kills the webdriver :(
         if you like having memory, make sure to kill the driver once youre done using it!
         '''
+        print("\x1b[2m[INFO] \x1b[0;1;35mKilling driver...\x1b[0m")
         self.driver.quit()
+        print("\x1b[2m[INFO] \x1b[0;1;32mDriver Killed\x1b[0m")
     
-    def tickets(self, page: int = 1, limit: int = 50) -> dict | bool:
+    def get_tickets(self, page: int = 1, limit: int = 50) -> dict | bool:
         '''
         Gets your tickets!
 
@@ -122,7 +132,8 @@ class Spiceworks:
                 cookies = {}
         except AttributeError:
             cookies = {}
-        self.get_ticket_req_headers()
+        if not self.tickets_headers:
+            self._get_ticket_req_headers()
         try:
             resp = requests.get(url=url, cookies=cookies, headers=self.tickets_headers)
         except Exception as e:
@@ -131,3 +142,28 @@ class Spiceworks:
         
         tickets = resp.json()
         return tickets
+    
+    def get_notifications(self) -> dict | bool:
+        '''
+        Gets your notifications
+        '''
+
+        try:
+            if self.tron_session:
+                cookies = {
+                    "_tron_session": self.tron_session
+                }
+            else:
+                cookies = {}
+        except AttributeError:
+            cookies = {}
+        if not self.tickets_headers:
+            self._get_ticket_req_headers()
+        try:
+            resp = requests.get(url="https://on.spiceworks.com/api/live_reload", cookies=cookies, headers=self.tickets_headers)
+        except Exception as e:
+            print(e)
+            return False
+        
+        notifications = resp.json()
+        return notifications
