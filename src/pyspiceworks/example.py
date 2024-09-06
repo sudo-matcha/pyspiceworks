@@ -1,4 +1,4 @@
-from Spiceworks import Spiceworks
+from pyspiceworks import Spiceworks
 import dotenv
 from pprint import pprint
 dotenv.load_dotenv()
