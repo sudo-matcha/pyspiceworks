@@ -1,6 +1,6 @@
 [project]
 name = "pyspiceworks"
-version = "0.0.1a0"
+version = "0.0.0a0"
 authors = [
   { name="Milo Pitsch", email="jskresl@gmail.com" },
 ]
