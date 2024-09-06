@@ -6,7 +6,7 @@ authors = [
 ]
 description = "A minimal python wrapper for the internal Spiceworks Cloud IT Help Desk API"
 requires-python = ">=3.8"
-install-requires = [
+dependencies = [
     "relative_datetime==0.1.4", 
     "selenium_wire==5.1.0",
 ]
