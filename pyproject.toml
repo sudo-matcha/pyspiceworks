@@ -1,11 +1,16 @@
 [project]
 name = "pyspiceworks"
-version = "0.0.1.alpha"
+version = "0.0.1a0"
 authors = [
   { name="Milo Pitsch", email="jskresl@gmail.com" },
 ]
 description = "A minimal python wrapper for the internal Spiceworks Cloud IT Help Desk API"
 requires-python = ">=3.8"
+install-requires = [
+    "relative_datetime==0.1.4", 
+    "selenium_wire==5.1.0",
+]
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
