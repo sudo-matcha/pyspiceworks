@@ -9,6 +9,8 @@ requires-python = ">=3.8"
 dependencies = [
     "relative_datetime==0.1.4", 
     "selenium_wire==5.1.0",
+    "requests==2.32.3",
+    "python-dotenv==1.0.1"
 ]
 
 classifiers = [
